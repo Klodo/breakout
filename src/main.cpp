@@ -15,13 +15,6 @@ struct Vec2 {
     int y;
 };
 
-struct Color {
-    std::uint8_t r = 0;
-    std::uint8_t g = 0;
-    std::uint8_t b = 0;
-    std::uint8_t a = 0;
-};
-
 struct Brick {
     SDL_Rect rect;
     int health = 0;
@@ -48,14 +41,14 @@ struct Paddle {
 struct Ball {
     enum class State { ATTACHED_TO_PADDLE, MOVING };
     State state = State::MOVING;
-    Vec2 position;
+    SDL_Rect rect;
     Vec2 velocity;
 
     void update();
 
     Ball() = default;
-    Ball(Vec2 position, Vec2 velocity)
-        : position(position), velocity(velocity) {}
+    Ball(Vec2 position, Vec2 velocity, int size)
+        : rect({position.x, position.y, size, size}), velocity(velocity) {}
 };
 
 /*****************************/
@@ -69,7 +62,7 @@ void handle_keydown(const SDL_KeyboardEvent& event);
 void handle_keyup(const SDL_KeyboardEvent& event);
 void handle_mouse_button_down(const SDL_MouseButtonEvent& event);
 void render();
-void render_rect(const SDL_Rect& rect, Color color);
+void render_rect(const SDL_Rect& rect, SDL_Color color);
 
 /*****************/
 /*** constants ***/
@@ -80,7 +73,7 @@ constexpr int WINDOW_HEIGHT = 480;
 constexpr int NUM_BRICK_COLUMNS = 13;
 constexpr int NUM_BRICK_ROWS = 10;
 
-constexpr Color BRICK_COLORS[NUM_BRICK_ROWS] = {
+constexpr SDL_Color BRICK_COLORS[NUM_BRICK_ROWS] = {
     {200, 200, 200, 255},
     {180, 180, 180, 255},
     {160, 160, 160, 255},
@@ -96,13 +89,13 @@ constexpr Color BRICK_COLORS[NUM_BRICK_ROWS] = {
 constexpr int BRICK_WIDTH = 40;
 constexpr int BRICK_HEIGHT = 20;
 
-constexpr Color PADDLE_COLOR = {100, 0, 40, 255};
+constexpr SDL_Color PADDLE_COLOR = {100, 0, 40, 255};
 constexpr int PADDLE_WIDTH = 100;
 constexpr int PADDLE_HEIGHT = 20;
 constexpr int PADDLE_SPEED = 5;
 
 constexpr int BALL_SIZE = 12;
-constexpr Color BALL_COLOR = {0, 100, 40, 255};
+constexpr SDL_Color BALL_COLOR = {0, 100, 40, 255};
 
 /***************/
 /*** globals ***/
@@ -191,7 +184,7 @@ void init_game() {
                       PADDLE_HEIGHT,
                       PADDLE_SPEED);
 
-    g_ball = Ball({400, 200}, {3, 4});
+    g_ball = Ball({400, 200}, {3, 4}, BALL_SIZE);
 }
 
 void handle_events() {
@@ -272,13 +265,12 @@ void render() {
     render_rect(g_paddle.rect, PADDLE_COLOR);
 
     // render ball
-    render_rect({g_ball.position.x, g_ball.position.y, BALL_SIZE, BALL_SIZE},
-                BALL_COLOR);
+    render_rect(g_ball.rect, BALL_COLOR);
 
     SDL_RenderPresent(g_renderer);
 }
 
-void render_rect(const SDL_Rect& rect, Color color) {
+void render_rect(const SDL_Rect& rect, SDL_Color color) {
     SDL_SetRenderDrawColor(g_renderer, color.r, color.g, color.b, color.a);
     SDL_RenderFillRect(g_renderer, &rect);
 }
@@ -311,28 +303,32 @@ void Ball::update() {
         break;
     }
     case State::MOVING: {
-        position.x += velocity.x;
-        position.y += velocity.y;
+        rect.x += velocity.x;
+        rect.y += velocity.y;
 
         // handle collision with window border
-        if (position.x < 0) {
-            position.x = 0;
+        if (rect.x < 0) {
+            rect.x = 0;
             velocity.x = -velocity.x;
-        } else if (position.x > WINDOW_WIDTH - BALL_SIZE) {
-            position.x = WINDOW_WIDTH - BALL_SIZE;
+        } else if (rect.x > WINDOW_WIDTH - BALL_SIZE) {
+            rect.x = WINDOW_WIDTH - BALL_SIZE;
             velocity.x = -velocity.x;
         }
 
-        if (position.y < 0) {
-            position.y = 0;
+        if (rect.y < 0) {
+            rect.y = 0;
             velocity.y = -velocity.y;
-        } else if (position.y > WINDOW_HEIGHT - BALL_SIZE) {
-            position.y = WINDOW_HEIGHT - BALL_SIZE;
+        } else if (rect.y > WINDOW_HEIGHT - BALL_SIZE) {
+            rect.y = WINDOW_HEIGHT - BALL_SIZE;
+            velocity.y = -velocity.y;
+        }
+
+        // handle collision with paddle
+        if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
             velocity.y = -velocity.y;
         }
 
         // handle collision with brick
-        // handle collision with paddle
 
         break;
     }
