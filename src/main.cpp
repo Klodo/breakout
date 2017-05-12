@@ -40,10 +40,16 @@ struct Paddle {
         }
         case State::MOVING_LEFT: {
             rect.x -= speed;
+            if (rect.x < 0) {
+                rect.x = 0;
+            }
             break;
         }
         case State::MOVING_RIGHT: {
             rect.x += speed;
+            if (rect.x > 640 - rect.w) {
+                rect.x = 640 - rect.w;
+            }
             break;
         }
         }
