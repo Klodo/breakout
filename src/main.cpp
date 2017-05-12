@@ -10,6 +10,11 @@
 /*** types ***/
 /*************/
 
+struct Vec2 {
+    int x;
+    int y;
+};
+
 struct Color {
     std::uint8_t r = 0;
     std::uint8_t g = 0;
@@ -33,31 +38,24 @@ struct Paddle {
     State state = State::NEUTRAL;
     int speed;
 
-    void update() {
-        switch (state) {
-        case State::NEUTRAL: {
-            break;
-        }
-        case State::MOVING_LEFT: {
-            rect.x -= speed;
-            if (rect.x < 0) {
-                rect.x = 0;
-            }
-            break;
-        }
-        case State::MOVING_RIGHT: {
-            rect.x += speed;
-            if (rect.x > 640 - rect.w) {
-                rect.x = 640 - rect.w;
-            }
-            break;
-        }
-        }
-    }
+    void update();
 
     Paddle() = default;
     Paddle(int x, int y, int w, int h, int speed)
         : rect({x, y, w, h}), speed(speed) {}
+};
+
+struct Ball {
+    enum class State { ATTACHED_TO_PADDLE, MOVING };
+    State state = State::MOVING;
+    Vec2 position;
+    Vec2 velocity;
+
+    void update();
+
+    Ball() = default;
+    Ball(Vec2 position, Vec2 velocity)
+        : position(position), velocity(velocity) {}
 };
 
 /*****************************/
@@ -103,6 +101,9 @@ constexpr int PADDLE_WIDTH = 100;
 constexpr int PADDLE_HEIGHT = 20;
 constexpr int PADDLE_SPEED = 5;
 
+constexpr int BALL_SIZE = 12;
+constexpr Color BALL_COLOR = {0, 100, 40, 255};
+
 /***************/
 /*** globals ***/
 /***************/
@@ -111,6 +112,7 @@ SDL_Window* g_window = nullptr;
 SDL_Renderer* g_renderer = nullptr;
 std::vector<Brick> g_bricks;
 Paddle g_paddle;
+Ball g_ball;
 
 /****************************/
 /*** function definitions ***/
@@ -125,6 +127,7 @@ int main(int argc, char** argv) {
     while (g_is_running) {
         handle_events();
         g_paddle.update();
+        g_ball.update();
         render();
     }
 
@@ -187,6 +190,8 @@ void init_game() {
                       PADDLE_WIDTH,
                       PADDLE_HEIGHT,
                       PADDLE_SPEED);
+
+    g_ball = Ball({400, 200}, {3, 4});
 }
 
 void handle_events() {
@@ -266,10 +271,70 @@ void render() {
     // render paddle
     render_rect(g_paddle.rect, PADDLE_COLOR);
 
+    // render ball
+    render_rect({g_ball.position.x, g_ball.position.y, BALL_SIZE, BALL_SIZE},
+                BALL_COLOR);
+
     SDL_RenderPresent(g_renderer);
 }
 
 void render_rect(const SDL_Rect& rect, Color color) {
     SDL_SetRenderDrawColor(g_renderer, color.r, color.g, color.b, color.a);
     SDL_RenderFillRect(g_renderer, &rect);
+}
+
+void Paddle::update() {
+    switch (state) {
+    case State::NEUTRAL: {
+        break;
+    }
+    case State::MOVING_LEFT: {
+        rect.x -= speed;
+        if (rect.x < 0) {
+            rect.x = 0;
+        }
+        break;
+    }
+    case State::MOVING_RIGHT: {
+        rect.x += speed;
+        if (rect.x > WINDOW_WIDTH - rect.w) {
+            rect.x = WINDOW_WIDTH - rect.w;
+        }
+        break;
+    }
+    }
+}
+
+void Ball::update() {
+    switch (state) {
+    case State::ATTACHED_TO_PADDLE: {
+        break;
+    }
+    case State::MOVING: {
+        position.x += velocity.x;
+        position.y += velocity.y;
+
+        // handle collision with window border
+        if (position.x < 0) {
+            position.x = 0;
+            velocity.x = -velocity.x;
+        } else if (position.x > WINDOW_WIDTH - BALL_SIZE) {
+            position.x = WINDOW_WIDTH - BALL_SIZE;
+            velocity.x = -velocity.x;
+        }
+
+        if (position.y < 0) {
+            position.y = 0;
+            velocity.y = -velocity.y;
+        } else if (position.y > WINDOW_HEIGHT - BALL_SIZE) {
+            position.y = WINDOW_HEIGHT - BALL_SIZE;
+            velocity.y = -velocity.y;
+        }
+
+        // handle collision with brick
+        // handle collision with paddle
+
+        break;
+    }
+    }
 }
