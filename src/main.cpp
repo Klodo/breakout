@@ -9,6 +9,7 @@
 /*************/
 /*** types ***/
 /*************/
+
 struct Color {
     std::uint8_t r = 0;
     std::uint8_t g = 0;
@@ -26,10 +27,31 @@ struct Brick {
 };
 
 struct Paddle {
+    enum class State { NEUTRAL, MOVING_LEFT, MOVING_RIGHT };
+
     SDL_Rect rect;
+    State state = State::NEUTRAL;
+    int speed;
+
+    void update() {
+        switch (state) {
+        case State::NEUTRAL: {
+            break;
+        }
+        case State::MOVING_LEFT: {
+            rect.x -= speed;
+            break;
+        }
+        case State::MOVING_RIGHT: {
+            rect.x += speed;
+            break;
+        }
+        }
+    }
 
     Paddle() = default;
-    Paddle(int x, int y, int w, int h) : rect({x, y, w, h}) {}
+    Paddle(int x, int y, int w, int h, int speed)
+        : rect({x, y, w, h}), speed(speed) {}
 };
 
 /*****************************/
@@ -40,6 +62,7 @@ void clean_sdl();
 void init_game();
 void handle_events();
 void handle_keydown(const SDL_KeyboardEvent& event);
+void handle_keyup(const SDL_KeyboardEvent& event);
 void handle_mouse_button_down(const SDL_MouseButtonEvent& event);
 void render();
 void render_rect(const SDL_Rect& rect, Color color);
@@ -72,7 +95,7 @@ constexpr int BRICK_HEIGHT = 20;
 constexpr Color PADDLE_COLOR = {100, 0, 40, 255};
 constexpr int PADDLE_WIDTH = 100;
 constexpr int PADDLE_HEIGHT = 20;
-constexpr int PADDLE_SPEED = 3;
+constexpr int PADDLE_SPEED = 5;
 
 /***************/
 /*** globals ***/
@@ -95,6 +118,7 @@ int main(int argc, char** argv) {
 
     while (g_is_running) {
         handle_events();
+        g_paddle.update();
         render();
     }
 
@@ -155,7 +179,8 @@ void init_game() {
     g_paddle = Paddle((WINDOW_WIDTH / 2) - (PADDLE_WIDTH / 2),
                       WINDOW_HEIGHT - 30 - PADDLE_HEIGHT,
                       PADDLE_WIDTH,
-                      PADDLE_HEIGHT);
+                      PADDLE_HEIGHT,
+                      PADDLE_SPEED);
 }
 
 void handle_events() {
@@ -164,6 +189,10 @@ void handle_events() {
         switch (event.type) {
         case SDL_KEYDOWN: {
             handle_keydown(event.key);
+            break;
+        }
+        case SDL_KEYUP: {
+            handle_keyup(event.key);
             break;
         }
         case SDL_MOUSEBUTTONDOWN: {
@@ -182,15 +211,33 @@ void handle_events() {
 void handle_keydown(const SDL_KeyboardEvent& event) {
     switch (event.keysym.scancode) {
     case SDL_SCANCODE_LEFT: {
-        g_paddle.rect.x -= PADDLE_SPEED;
+        g_paddle.state = Paddle::State::MOVING_LEFT;
         break;
     }
     case SDL_SCANCODE_RIGHT: {
-        g_paddle.rect.x += PADDLE_SPEED;
+        g_paddle.state = Paddle::State::MOVING_RIGHT;
         break;
     }
     case SDL_SCANCODE_ESCAPE: {
         g_is_running = false;
+        break;
+    }
+    default: { break; }
+    }
+}
+
+void handle_keyup(const SDL_KeyboardEvent& event) {
+    switch (event.keysym.scancode) {
+    case SDL_SCANCODE_LEFT: {
+        if (g_paddle.state == Paddle::State::MOVING_LEFT) {
+            g_paddle.state = Paddle::State::NEUTRAL;
+        }
+        break;
+    }
+    case SDL_SCANCODE_RIGHT: {
+        if (g_paddle.state == Paddle::State::MOVING_RIGHT) {
+            g_paddle.state = Paddle::State::NEUTRAL;
+        }
         break;
     }
     default: { break; }
