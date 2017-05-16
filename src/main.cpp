@@ -61,8 +61,9 @@ void handle_events();
 void handle_keydown(const SDL_KeyboardEvent& event);
 void handle_keyup(const SDL_KeyboardEvent& event);
 void handle_mouse_button_down(const SDL_MouseButtonEvent& event);
-void render();
+void render(double);
 void render_rect(const SDL_Rect& rect, SDL_Color color);
+void game_loop();
 
 /*****************/
 /*** constants ***/
@@ -97,6 +98,8 @@ constexpr int PADDLE_SPEED = 5;
 constexpr int BALL_SIZE = 12;
 constexpr SDL_Color BALL_COLOR = {0, 100, 40, 255};
 
+constexpr int MS_PER_UPDATE = 20;
+
 /***************/
 /*** globals ***/
 /***************/
@@ -117,12 +120,7 @@ int main(int argc, char** argv) {
 
     init_game();
 
-    while (g_is_running) {
-        handle_events();
-        g_paddle.update();
-        g_ball.update();
-        render();
-    }
+    game_loop();
 
     clean_sdl();
 }
@@ -185,6 +183,33 @@ void init_game() {
                       PADDLE_SPEED);
 
     g_ball = Ball({400, 200}, {3, 4}, BALL_SIZE);
+}
+
+void game_loop() {
+    using double_ms =
+        std::chrono::duration<double, std::chrono::milliseconds::period>;
+
+    auto previous = std::chrono::high_resolution_clock::now();
+    double lag = 0;
+    while (g_is_running) {
+        {
+            auto current = std::chrono::high_resolution_clock::now();
+            auto elapsed = current - previous;
+            previous = current;
+            lag += double_ms(elapsed).count();
+        }
+
+        handle_events();
+
+        while (lag >= MS_PER_UPDATE) {
+            g_paddle.update();
+            g_ball.update();
+
+            lag -= MS_PER_UPDATE;
+        }
+
+        render(lag / MS_PER_UPDATE);
+    }
 }
 
 void handle_events() {
@@ -252,7 +277,9 @@ void handle_mouse_button_down(const SDL_MouseButtonEvent& event) {
     std::cout << '(' << event.x << ", " << event.y << ")\n";
 }
 
-void render() {
+void render(const double lag) {
+    // TODO: interpolate using lag
+
     SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0x00);
     SDL_RenderClear(g_renderer);
 
