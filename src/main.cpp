@@ -182,7 +182,7 @@ void init_game() {
                       PADDLE_HEIGHT,
                       PADDLE_SPEED);
 
-    g_ball = Ball({400, 200}, {3, 4}, BALL_SIZE);
+    g_ball = Ball({320, 340}, {3, 4}, BALL_SIZE);
 }
 
 void game_loop() {
@@ -330,32 +330,61 @@ void Ball::update() {
         break;
     }
     case State::MOVING: {
-        rect.x += velocity.x;
-        rect.y += velocity.y;
+        {
+            rect.x += velocity.x;
 
-        // handle collision with window border
-        if (rect.x < 0) {
-            rect.x = 0;
-            velocity.x = -velocity.x;
-        } else if (rect.x > WINDOW_WIDTH - BALL_SIZE) {
-            rect.x = WINDOW_WIDTH - BALL_SIZE;
-            velocity.x = -velocity.x;
+            // handle collision with window border
+            if (rect.x < 0) {
+                rect.x = 0;
+                velocity.x = -velocity.x;
+            } else if (rect.x > WINDOW_WIDTH - BALL_SIZE) {
+                rect.x = WINDOW_WIDTH - BALL_SIZE;
+                velocity.x = -velocity.x;
+            }
+
+            // handle collision with brick
+            for (const auto& brick : g_bricks) {
+                if (SDL_HasIntersection(&rect, &brick.rect)) {
+                    rect.x -= velocity.x;
+                    velocity.x = -velocity.x;
+                    break; // TODO: support collision with multiple blocks
+                }
+            }
+
+            // handle collision with paddle
+            if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
+                rect.x -= velocity.x;
+                velocity.x = -velocity.x;
+            }
         }
 
-        if (rect.y < 0) {
-            rect.y = 0;
-            velocity.y = -velocity.y;
-        } else if (rect.y > WINDOW_HEIGHT - BALL_SIZE) {
-            rect.y = WINDOW_HEIGHT - BALL_SIZE;
-            velocity.y = -velocity.y;
-        }
+        {
+            rect.y += velocity.y;
 
-        // handle collision with paddle
-        if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
-            velocity.y = -velocity.y;
-        }
+            // handle collision with window border
+            if (rect.y < 0) {
+                rect.y = 0;
+                velocity.y = -velocity.y;
+            } else if (rect.y > WINDOW_HEIGHT - BALL_SIZE) {
+                rect.y = WINDOW_HEIGHT - BALL_SIZE;
+                velocity.y = -velocity.y;
+            }
 
-        // handle collision with brick
+            // handle collision with brick
+            for (const auto& brick : g_bricks) {
+                if (SDL_HasIntersection(&rect, &brick.rect)) {
+                    rect.y -= velocity.y;
+                    velocity.y = -velocity.y;
+                    break; // TODO: support collision with multiple blocks
+                }
+            }
+
+            // handle collision with paddle
+            if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
+                rect.y -= velocity.y;
+                velocity.y = -velocity.y;
+            }
+        }
 
         break;
     }
