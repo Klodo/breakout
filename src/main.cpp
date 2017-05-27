@@ -74,17 +74,18 @@ constexpr int WINDOW_HEIGHT = 480;
 constexpr int NUM_BRICK_COLUMNS = 13;
 constexpr int NUM_BRICK_ROWS = 10;
 
-constexpr SDL_Color BRICK_COLORS[NUM_BRICK_ROWS] = {
-    {200, 200, 200, 255},
-    {180, 180, 180, 255},
-    {160, 160, 160, 255},
-    {140, 140, 140, 255},
-    {120, 120, 120, 255},
-    {100, 100, 100, 255},
-    {80, 80, 80, 255},
-    {60, 60, 60, 255},
-    {40, 40, 40, 255},
+constexpr SDL_Color BRICK_COLORS[NUM_BRICK_ROWS + 1] = {
+    {0, 0, 0, 255},
     {20, 20, 20, 255},
+    {40, 40, 40, 255},
+    {60, 60, 60, 255},
+    {80, 80, 80, 255},
+    {100, 100, 100, 255},
+    {120, 120, 120, 255},
+    {140, 140, 140, 255},
+    {160, 160, 160, 255},
+    {180, 180, 180, 255},
+    {200, 200, 200, 255},
 };
 
 constexpr int BRICK_WIDTH = 40;
@@ -285,7 +286,7 @@ void render(const double lag) {
 
     // render bricks
     for (const auto& brick : g_bricks) {
-        render_rect(brick.rect, BRICK_COLORS[brick.health - 1]);
+        render_rect(brick.rect, BRICK_COLORS[brick.health]);
     }
 
     // render paddle
@@ -343,8 +344,9 @@ void Ball::update() {
             }
 
             // handle collision with brick
-            for (const auto& brick : g_bricks) {
-                if (SDL_HasIntersection(&rect, &brick.rect)) {
+            for (auto& brick : g_bricks) {
+                if (brick.health && SDL_HasIntersection(&rect, &brick.rect)) {
+                    --brick.health;
                     rect.x -= velocity.x;
                     velocity.x = -velocity.x;
                     break; // TODO: support collision with multiple blocks
@@ -371,8 +373,9 @@ void Ball::update() {
             }
 
             // handle collision with brick
-            for (const auto& brick : g_bricks) {
-                if (SDL_HasIntersection(&rect, &brick.rect)) {
+            for (auto& brick : g_bricks) {
+                if (brick.health && SDL_HasIntersection(&rect, &brick.rect)) {
+                    --brick.health;
                     rect.y -= velocity.y;
                     velocity.y = -velocity.y;
                     break; // TODO: support collision with multiple blocks
