@@ -183,7 +183,7 @@ void init_game() {
                       PADDLE_HEIGHT,
                       PADDLE_SPEED);
 
-    g_ball = Ball({320, 340}, {3, 4}, BALL_SIZE);
+    g_ball = Ball({320, 340}, {6, 8}, BALL_SIZE);
 }
 
 void game_loop() {
