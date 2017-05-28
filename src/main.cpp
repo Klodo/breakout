@@ -331,30 +331,32 @@ void Ball::update() {
         break;
     }
     case State::MOVING: {
+        // NOTE: The following collision detection / handling code is not very
+        // good.
         {
             rect.x += velocity.x;
 
+            bool has_x_collision = false;
             // handle collision with window border
-            if (rect.x < 0) {
-                rect.x = 0;
-                velocity.x = -velocity.x;
-            } else if (rect.x > WINDOW_WIDTH - BALL_SIZE) {
-                rect.x = WINDOW_WIDTH - BALL_SIZE;
-                velocity.x = -velocity.x;
+            if ((rect.x < 0) || (rect.x > WINDOW_WIDTH - BALL_SIZE)) {
+                has_x_collision = true;
             }
 
             // handle collision with brick
             for (auto& brick : g_bricks) {
                 if (brick.health && SDL_HasIntersection(&rect, &brick.rect)) {
                     --brick.health;
-                    rect.x -= velocity.x;
-                    velocity.x = -velocity.x;
-                    break; // TODO: support collision with multiple blocks
+                    has_x_collision = true;
                 }
             }
 
             // handle collision with paddle
             if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
+                has_x_collision = true;
+            }
+
+            if (has_x_collision) {
+                // revert last movement and invert direction
                 rect.x -= velocity.x;
                 velocity.x = -velocity.x;
             }
@@ -362,28 +364,28 @@ void Ball::update() {
 
         {
             rect.y += velocity.y;
+            bool has_y_collision = false;
 
             // handle collision with window border
-            if (rect.y < 0) {
-                rect.y = 0;
-                velocity.y = -velocity.y;
-            } else if (rect.y > WINDOW_HEIGHT - BALL_SIZE) {
-                rect.y = WINDOW_HEIGHT - BALL_SIZE;
-                velocity.y = -velocity.y;
+            if ((rect.y < 0) || (rect.y > WINDOW_HEIGHT - BALL_SIZE)) {
+                has_y_collision = true;
             }
 
             // handle collision with brick
             for (auto& brick : g_bricks) {
                 if (brick.health && SDL_HasIntersection(&rect, &brick.rect)) {
                     --brick.health;
-                    rect.y -= velocity.y;
-                    velocity.y = -velocity.y;
-                    break; // TODO: support collision with multiple blocks
+                    has_y_collision = true;
                 }
             }
 
             // handle collision with paddle
             if (SDL_HasIntersection(&rect, &g_paddle.rect)) {
+                has_y_collision = true;
+            }
+
+            if (has_y_collision) {
+                // revert last movement and invert direction
                 rect.y -= velocity.y;
                 velocity.y = -velocity.y;
             }
