@@ -1,4 +1,7 @@
+#include <GL/gl3w.h>
 #include <SDL2/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_sdl_gl3.h>
 
 #include <chrono>
 #include <cstdint>
@@ -94,7 +97,7 @@ constexpr int BRICK_HEIGHT = 20;
 constexpr SDL_Color PADDLE_COLOR = {100, 0, 40, 255};
 constexpr int PADDLE_WIDTH = 100;
 constexpr int PADDLE_HEIGHT = 20;
-constexpr int PADDLE_SPEED = 5;
+int PADDLE_SPEED = 5;
 
 constexpr int BALL_SIZE = 12;
 constexpr SDL_Color BALL_COLOR = {0, 100, 40, 255};
@@ -105,11 +108,13 @@ constexpr int MS_PER_UPDATE = 20;
 /*** globals ***/
 /***************/
 bool g_is_running = true;
+bool g_show_menu = false;
 SDL_Window* g_window = nullptr;
 SDL_Renderer* g_renderer = nullptr;
 std::vector<Brick> g_bricks;
 Paddle g_paddle;
 Ball g_ball;
+SDL_GLContext glcontext;
 
 /****************************/
 /*** function definitions ***/
@@ -143,6 +148,10 @@ bool init_sdl() {
         std::cout << "g_window == nullptr\n";
         return false;
     }
+
+    glcontext = SDL_GL_CreateContext(g_window);
+    gl3wInit();
+    ImGui_ImplSdlGL3_Init(g_window);
 
     g_renderer = SDL_CreateRenderer(
         g_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -192,6 +201,11 @@ void game_loop() {
 
     auto previous = std::chrono::high_resolution_clock::now();
     double lag = 0;
+
+    bool show_test_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImColor(114, 144, 154);
+
     while (g_is_running) {
         {
             auto current = std::chrono::high_resolution_clock::now();
@@ -201,6 +215,27 @@ void game_loop() {
         }
 
         handle_events();
+
+        ImGui_ImplSdlGL3_NewFrame(g_window);
+
+        // 1. Show a simple window
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears
+        // in a window automatically called "Debug"
+        if (g_show_menu) {
+            ImGui::Begin("Breakout", &g_show_menu);
+            static float f = 0.0f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderInt("Paddle speed", &PADDLE_SPEED, 1, 10);
+            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+            if (ImGui::Button("Close Menu"))
+                g_show_menu = false;
+            if (ImGui::Button("Exit"))
+                g_is_running = false;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                        1000.0f / ImGui::GetIO().Framerate,
+                        ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
 
         while (lag >= MS_PER_UPDATE) {
             g_paddle.update();
@@ -216,6 +251,8 @@ void game_loop() {
 void handle_events() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        ImGui_ImplSdlGL3_ProcessEvent(&event);
+
         switch (event.type) {
         case SDL_KEYDOWN: {
             handle_keydown(event.key);
@@ -249,7 +286,8 @@ void handle_keydown(const SDL_KeyboardEvent& event) {
         break;
     }
     case SDL_SCANCODE_ESCAPE: {
-        g_is_running = false;
+        // g_is_running = false;
+        g_show_menu = !g_show_menu;
         break;
     }
     default: { break; }
@@ -295,6 +333,8 @@ void render(const double lag) {
     // render ball
     render_rect(g_ball.rect, BALL_COLOR);
 
+    ImGui::Render();
+
     SDL_RenderPresent(g_renderer);
 }
 
@@ -309,14 +349,14 @@ void Paddle::update() {
         break;
     }
     case State::MOVING_LEFT: {
-        rect.x -= speed;
+        rect.x -= PADDLE_SPEED;
         if (rect.x < 0) {
             rect.x = 0;
         }
         break;
     }
     case State::MOVING_RIGHT: {
-        rect.x += speed;
+        rect.x += PADDLE_SPEED;
         if (rect.x > WINDOW_WIDTH - rect.w) {
             rect.x = WINDOW_WIDTH - rect.w;
         }

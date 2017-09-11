@@ -19,6 +19,8 @@ find_package(SDL2_image REQUIRED)
 
 include_directories(
     src/
+    libs/
+    libs/gl3w
     ${SDL2_INCLUDE_DIR}
     ${SDL2_IMAGE_INCLUDE_DIR}
 )
@@ -26,11 +28,18 @@ include_directories(
 set(libs
     ${SDL2_LIBRARY}
     ${SDL2_IMAGE_LIBRARIES}
+    GL
+    dl
 )
 
 file(GLOB breakout_src "src/*.cpp")
+file(GLOB imgui_src "libs/*.cpp")
 
-add_executable(breakout ${breakout_src})
+add_executable(breakout
+    ${breakout_src}
+    ${imgui_src}
+    libs/gl3w/GL/gl3w.c
+)
 
 target_link_libraries(breakout ${libs})
 
